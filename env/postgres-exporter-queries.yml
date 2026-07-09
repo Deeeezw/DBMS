@@ -1,0 +1,94 @@
+# ============================================================
+# postgres_exporter — Custom SQL Queries
+# Exposes master_db tables as Prometheus metrics
+# ============================================================
+
+pg_master_data:
+  query: >
+    SELECT
+      status,
+      target_shard::text AS shard,
+      COUNT(*) AS total
+    FROM master_data
+    GROUP BY status, target_shard
+  metrics:
+    - status:
+        usage: "LABEL"
+        description: "Row distribution status"
+    - shard:
+        usage: "LABEL"
+        description: "Target shard number"
+    - total:
+        usage: "GAUGE"
+        description: "Number of rows with this status on this shard"
+
+pg_event_queue:
+  query: >
+    SELECT
+      event_type,
+      status,
+      COUNT(*)                   AS total,
+      COALESCE(MAX(retry_count), 0) AS max_retries
+    FROM event_queue
+    GROUP BY event_type, status
+  metrics:
+    - event_type:
+        usage: "LABEL"
+        description: "Type of event"
+    - status:
+        usage: "LABEL"
+        description: "Event processing status"
+    - total:
+        usage: "GAUGE"
+        description: "Number of events"
+    - max_retries:
+        usage: "GAUGE"
+        description: "Maximum retry count across events"
+
+pg_shard_status:
+  query: >
+    SELECT
+      shard_name,
+      CASE WHEN status = 'online' THEN 1 ELSE 0 END AS is_online
+    FROM shard_status
+  metrics:
+    - shard_name:
+        usage: "LABEL"
+        description: "Name of the shard"
+    - is_online:
+        usage: "GAUGE"
+        description: "1 if shard is online, 0 if offline"
+
+pg_sync_log:
+  query: >
+    SELECT
+      event_type,
+      COUNT(*) AS total
+    FROM sync_log
+    GROUP BY event_type
+  metrics:
+    - event_type:
+        usage: "LABEL"
+        description: "Sync event type"
+    - total:
+        usage: "GAUGE"
+        description: "Number of sync log entries"
+
+pg_rebalance:
+  query: >
+    SELECT
+      COALESCE(action, 'none')       AS action,
+      COUNT(*)                        AS operations,
+      COALESCE(SUM(rows_moved), 0)    AS total_rows_moved
+    FROM rebalance_log
+    GROUP BY action
+  metrics:
+    - action:
+        usage: "LABEL"
+        description: "Rebalance action type"
+    - operations:
+        usage: "GAUGE"
+        description: "Number of rebalance operations"
+    - total_rows_moved:
+        usage: "GAUGE"
+        description: "Total rows moved across all rebalance operations"

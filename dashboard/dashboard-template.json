@@ -1,0 +1,49 @@
+{
+  "dashboard": {
+    "title": "Distributed DB Demo",
+    "tags": ["distributed", "database", "sharding"],
+    "timezone": "browser",
+    "panels": [
+      {
+        "title": "Request Rate",
+        "targets": [
+          {
+            "expr": "rate(http_requests_total[1m])"
+          }
+        ]
+      },
+      {
+        "title": "Average Response Time",
+        "targets": [
+          {
+            "expr": "rate(http_request_duration_seconds_sum[1m]) / rate(http_request_duration_seconds_count[1m])"
+          }
+        ]
+      },
+      {
+        "title": "Shard Online Status",
+        "targets": [
+          {
+            "expr": "shard_online"
+          }
+        ]
+      },
+      {
+        "title": "Shard Data Rows",
+        "targets": [
+          {
+            "expr": "shard_data_rows_total"
+          }
+        ]
+      },
+      {
+        "title": "HTTP Requests by Status",
+        "targets": [
+          {
+            "expr": "sum by (status_code) (rate(http_requests_total[1m]))"
+          }
+        ]
+      }
+    ]
+  }
+}

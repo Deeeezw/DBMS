@@ -1,0 +1,31 @@
+# Node
+backend/node_modules/
+backend/npm-debug.log*
+backend/yarn-debug.log*
+backend/yarn-error.log*
+backend/temp*.js
+backend/section*.js
+backend/server-top.js
+
+# Environment secrets
+.env
+*.env.local
+
+# Docker volumes / runtime data
+postgres_data/
+grafana_data/
+prometheus_data/
+loki_data/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Editor
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Logs
+*.log

@@ -1,0 +1,17 @@
+{
+  "name": "distributed-db-backend",
+  "version": "2.0.0",
+  "description": "Distributed DB Demo Backend — 2 masters + 6 shards",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "cors": "^2.8.5",
+    "pg": "^8.11.3",
+    "prom-client": "^15.0.0",
+    "winston": "^3.11.0",
+    "winston-loki": "^6.1.0"
+  }
+}

@@ -1,0 +1,736 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Distributed DB Dashboard</title>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:'Segoe UI',sans-serif;background:#0f172a;color:#e2e8f0;min-height:100vh}
+  header{background:#1e3a5f;padding:16px 24px;border-bottom:2px solid #2563eb;display:flex;align-items:center;gap:16px}
+  header h1{font-size:1.4rem;font-weight:700;color:#60a5fa}
+  header span{font-size:.85rem;color:#94a3b8}
+  main{padding:20px;max-width:1600px;margin:0 auto;display:grid;gap:16px}
+  .row{display:grid;gap:16px}
+  .row-2{grid-template-columns:1fr 1fr}
+  .row-3{grid-template-columns:repeat(3,1fr)}
+  .row-4{grid-template-columns:repeat(4,1fr)}
+  @media(max-width:1200px){.row-4{grid-template-columns:repeat(2,1fr)}}
+  .row-6{grid-template-columns:repeat(6,1fr)}
+  @media(max-width:1100px){.row-6{grid-template-columns:repeat(3,1fr)}}
+  @media(max-width:900px){.row-2,.row-3,.row-6{grid-template-columns:1fr}}
+  .card{background:#1e293b;border:1px solid #334155;border-radius:12px;padding:16px}
+  .card h2{font-size:.9rem;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:.08em;margin-bottom:12px;display:flex;align-items:center;gap:8px}
+  .card h2 .icon{font-size:1.1rem}
+  .stat-big{font-size:2.4rem;font-weight:800;line-height:1}
+  .stat-m1{color:#38bdf8}
+  .stat-m2{color:#818cf8}
+  .stat-label{font-size:.75rem;color:#64748b;margin-top:4px}
+  .conn-row{display:flex;align-items:center;gap:6px;margin-top:10px;font-size:.78rem;color:#64748b}
+  .node-card{background:#0f172a;border:1px solid #334155;border-radius:8px;padding:12px;text-align:center}
+  .node-card .name{font-size:.8rem;font-weight:700;color:#94a3b8;margin-bottom:6px}
+  .node-card .count{font-size:1.6rem;font-weight:800;color:#f1f5f9}
+  .node-card .master-tag{font-size:.65rem;color:#475569;margin-top:3px}
+  .node-card.online{border-color:#166534}
+  .node-card.offline{border-color:#7f1d1d;opacity:.7}
+  .status-dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:4px;flex-shrink:0}
+  .dot-on{background:#22c55e}
+  .dot-off{background:#ef4444}
+  /* Buttons */
+  .btn{border:none;border-radius:8px;padding:8px 16px;font-size:.85rem;font-weight:600;cursor:pointer;transition:opacity .15s,transform .1s;display:inline-flex;align-items:center;gap:6px}
+  .btn:hover:not(:disabled){opacity:.85;transform:translateY(-1px)}
+  .btn:disabled{opacity:.45;cursor:not-allowed}
+  .btn-primary{background:#2563eb;color:#fff}
+  .btn-danger{background:#dc2626;color:#fff}
+  .btn-success{background:#16a34a;color:#fff}
+  .btn-warn{background:#d97706;color:#fff}
+  .btn-gray{background:#334155;color:#e2e8f0}
+  .btn-sm{padding:5px 10px;font-size:.78rem;border-radius:6px}
+  /* Management */
+  .mgmt-split{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+  @media(max-width:700px){.mgmt-split{grid-template-columns:1fr}}
+  .mgmt-group-label{font-size:.72rem;color:#60a5fa;font-weight:700;margin-bottom:8px;text-transform:uppercase;letter-spacing:.06em}
+  .mgmt-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+  .mgmt-pair{display:flex;flex-direction:column;gap:4px;align-items:center}
+  .mgmt-pair label{font-size:.72rem;color:#64748b;text-align:center;display:flex;align-items:center;justify-content:center}
+  /* Add form */
+  .add-form{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+  .add-form input[type=number],.add-form input[type=text]{background:#0f172a;border:1px solid #334155;border-radius:8px;color:#e2e8f0;padding:8px 14px;font-size:.9rem}
+  .add-form input[type=number]{width:110px}
+  .add-form input[type=text]{width:180px}
+  .add-form input:focus,.add-form select:focus,.node-select:focus{outline:none;border-color:#2563eb}
+  .add-form select,.node-select{background:#0f172a;border:1px solid #334155;border-radius:8px;color:#e2e8f0;padding:6px 12px;font-size:.82rem}
+  /* Tabs */
+  .tab-bar{display:flex;gap:4px;margin-bottom:12px}
+  .tab-btn{background:#0f172a;border:1px solid #334155;border-radius:6px;color:#94a3b8;padding:4px 14px;font-size:.78rem;font-weight:600;cursor:pointer;transition:all .15s}
+  .tab-btn.active{background:#2563eb;border-color:#2563eb;color:#fff}
+  .tab-panel{display:none}
+  .tab-panel.active{display:block}
+  .manual-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px}
+  .manual-grid label{font-size:.72rem;color:#64748b;display:block;margin-bottom:3px}
+  .manual-grid input{width:100%}
+  /* Tables */
+  .tbl-wrap{overflow-x:auto;max-height:400px;overflow-y:auto}
+  /* Search */
+  .tbl-toolbar{display:flex;align-items:center;gap:8px;margin-bottom:8px}
+  .tbl-search{background:#0f172a;border:1px solid #334155;border-radius:8px;color:#e2e8f0;padding:6px 12px;font-size:.82rem;flex:1}
+  .tbl-search:focus{outline:none;border-color:#2563eb}
+  .tbl-count{font-size:.72rem;color:#475569;white-space:nowrap}
+  table{width:100%;border-collapse:collapse;font-size:.78rem}
+  th{background:#0f172a;color:#64748b;text-align:left;padding:6px 10px;position:sticky;top:0;border-bottom:1px solid #334155}
+  td{padding:5px 10px;border-bottom:1px solid #1e293b;color:#cbd5e1}
+  tr:hover td{background:#162032}
+  .ev-type{padding:2px 8px;border-radius:4px;font-size:.72rem;font-weight:600}
+  .ev-done{background:#14532d;color:#86efac}
+  .ev-pending{background:#713f12;color:#fde68a}
+  .ev-failed{background:#7f1d1d;color:#fca5a5}
+  /* Toast */
+  #toast{position:fixed;bottom:24px;right:24px;background:#1e3a5f;border:1px solid #2563eb;border-radius:10px;padding:12px 20px;font-size:.85rem;max-width:360px;display:none;z-index:999;animation:fadeIn .2s}
+  @keyframes fadeIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+  .toast-ok{border-color:#166534!important;background:#0d2818!important}
+  .toast-err{border-color:#7f1d1d!important;background:#1a0808!important}
+  .global-actions{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:14px}
+</style>
+</head>
+<body>
+
+<header>
+  <h1>🗄 Distributed DB Dashboard</h1>
+  <span>2 Masters · 6 Shards</span>
+  <span id="last-refresh" style="margin-left:auto;font-size:.75rem;color:#475569"></span>
+</header>
+
+<div id="toast"></div>
+
+<main>
+
+  <!-- ── ROW 1: Masters + Add/Delete Data ── -->
+  <div class="row row-4">
+
+    <div class="card">
+      <h2><span class="icon">🏛</span>Master 1 — Food &amp; Grocery</h2>
+      <div class="stat-big stat-m1" id="master1-count">–</div>
+      <div class="stat-label">Total rows in barang (shard1–3)</div>
+      <div class="conn-row">
+        <span class="status-dot" id="dot-master1"></span>
+        <span id="conn-master1">connecting…</span>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2><span class="icon">🏛</span>Master 2 — Household &amp; Non-Food</h2>
+      <div class="stat-big stat-m2" id="master2-count">–</div>
+      <div class="stat-label">Total rows in barang (shard4–6)</div>
+      <div class="conn-row">
+        <span class="status-dot" id="dot-master2"></span>
+        <span id="conn-master2">connecting…</span>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2><span class="icon">➕</span>Add Data</h2>
+      <div class="tab-bar">
+        <button class="tab-btn active" id="tab-bulk" onclick="switchTab('bulk')">Bulk</button>
+        <button class="tab-btn" id="tab-manual" onclick="switchTab('manual')">Manual</button>
+      </div>
+
+      <!-- Bulk panel -->
+      <div class="tab-panel active" id="panel-bulk">
+        <div class="add-form">
+          <input type="number" id="add-count" placeholder="e.g. 100" min="1" max="5000" value="100"/>
+          <select id="add-master">
+            <option value="1">Master 1</option>
+            <option value="2">Master 2</option>
+          </select>
+          <button class="btn btn-primary" id="btn-add">Add Bulk</button>
+        </div>
+      </div>
+
+      <!-- Manual panel -->
+      <div class="tab-panel" id="panel-manual">
+        <div class="manual-grid">
+          <div>
+            <label for="man-name">Item Name</label>
+            <input class="add-form" type="text" id="man-name" placeholder="e.g. Mie Goreng"/>
+          </div>
+          <div>
+            <label for="man-id">ID (leave blank = auto)</label>
+            <input class="add-form" type="number" id="man-id" placeholder="auto" min="1"/>
+          </div>
+          <div>
+            <label for="man-stok">Stock</label>
+            <input class="add-form" type="number" id="man-stok" placeholder="e.g. 50" min="0"/>
+          </div>
+          <div>
+            <label for="man-master">Master</label>
+            <select class="add-form" id="man-master" style="width:100%">
+              <option value="1">Master 1 (Food)</option>
+              <option value="2">Master 2 (Household)</option>
+            </select>
+          </div>
+        </div>
+        <button class="btn btn-primary" id="btn-insert">Insert Item</button>
+      </div>
+
+      <div id="add-result" style="margin-top:12px;font-size:.82rem;color:#94a3b8"></div>
+    </div>
+
+    <!-- Delete Data card -->
+    <div class="card">
+      <h2><span class="icon">🗑️</span>Delete Item</h2>
+      <p style="font-size:.78rem;color:#64748b;margin-bottom:12px">Removes the item from its master and all its shards. Enter the exact <code>id_barang</code>.</p>
+      <div class="add-form" style="flex-direction:column;align-items:flex-start;gap:10px">
+        <div style="display:flex;gap:8px;align-items:center">
+          <input type="number" id="del-id" placeholder="id_barang e.g. 42" min="1" style="width:200px"/>
+          <button class="btn btn-danger" id="btn-delete">Delete Item</button>
+        </div>
+        <div id="del-preview" style="font-size:.78rem;color:#94a3b8"></div>
+      </div>
+      <div id="del-result" style="margin-top:12px;font-size:.82rem;color:#94a3b8"></div>
+    </div>
+
+  </div>
+
+  <!-- ── ROW 2: Shard status cards (all 6) ── -->
+  <div class="card">
+    <h2><span class="icon">📦</span>Shards — Live Row Counts</h2>
+    <div class="row row-6" id="shard-cards">
+      <!-- filled by JS -->
+    </div>
+  </div>
+
+  <!-- ── ROW 3: System Management ── -->
+  <div class="card">
+    <h2><span class="icon">⚙️</span>System Management</h2>
+    <div class="mgmt-split">
+      <div>
+        <div class="mgmt-group-label">🏛 Master 1 Shards (shard1–3)</div>
+        <div class="mgmt-grid" id="mgmt-grid-1"></div>
+      </div>
+      <div>
+        <div class="mgmt-group-label">🏛 Master 2 Shards (shard4–6)</div>
+        <div class="mgmt-grid" id="mgmt-grid-2"></div>
+      </div>
+    </div>
+    <div class="global-actions">
+      <button class="btn btn-danger btn-sm" id="btn-kill-all">💀 Kill All Shards</button>
+      <button class="btn btn-success btn-sm" id="btn-recover-all">♻️ Recover All Shards</button>
+      <span style="width:12px"></span>
+      <button class="btn btn-warn btn-sm" id="btn-sync">🔄 Sync</button>
+      <button class="btn btn-primary btn-sm" id="btn-rebalance">⚖️ Rebalance</button>
+      <button class="btn btn-gray btn-sm" id="btn-refresh">🔃 Refresh</button>
+    </div>
+    <div id="mgmt-result" style="margin-top:10px;font-size:.82rem;color:#94a3b8"></div>
+  </div>
+
+  <!-- ── ROW 4: Sample data tables ── -->
+  <div class="row row-2">
+
+    <div class="card">
+      <h2><span class="icon">📋</span>Master — All Rows <span id="master-count-badge" style="font-size:.7rem;font-weight:400;color:#475569;margin-left:4px"></span></h2>
+      <div class="tbl-toolbar">
+        <select class="node-select" id="master-select">
+          <option value="master1">master1 (Food &amp; Grocery)</option>
+          <option value="master2">master2 (Household)</option>
+        </select>
+        <input class="tbl-search" id="master-search" type="text" placeholder="Search name or ID…"/>
+      </div>
+      <div class="tbl-wrap">
+        <table id="tbl-master">
+          <thead>
+            <tr><th>id_barang</th><th>nama_barang</th><th>stok</th><th>target_shard</th></tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2><span class="icon">📋</span>Shard — All Rows <span id="shard-count-badge" style="font-size:.7rem;font-weight:400;color:#475569;margin-left:4px"></span></h2>
+      <div class="tbl-toolbar">
+        <select class="node-select" id="shard-select">
+          <option value="shard1">shard1 — master1</option>
+          <option value="shard2">shard2 — master1</option>
+          <option value="shard3">shard3 — master1</option>
+          <option value="shard4">shard4 — master2</option>
+          <option value="shard5">shard5 — master2</option>
+          <option value="shard6">shard6 — master2</option>
+        </select>
+        <input class="tbl-search" id="shard-search" type="text" placeholder="Search name or ID…"/>
+      </div>
+      <div class="tbl-wrap">
+        <table id="tbl-shard">
+          <thead>
+            <tr><th>id_barang</th><th>nama_barang</th><th>stok</th></tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ── ROW 5: Event / Sync / Rebalance logs ── -->
+  <div class="row row-3">
+
+    <div class="card">
+      <h2><span class="icon">📡</span>Event Log</h2>
+      <div class="tbl-wrap">
+        <table id="tbl-events">
+          <thead><tr><th>id</th><th>type</th><th>shard</th><th>status</th><th>created</th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2><span class="icon">🔄</span>Sync Log</h2>
+      <div class="tbl-wrap">
+        <table id="tbl-sync">
+          <thead><tr><th>id</th><th>type</th><th>shard</th><th>message</th><th>time</th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2><span class="icon">⚖️</span>Rebalance Log</h2>
+      <div class="tbl-wrap">
+        <table id="tbl-rebal">
+          <thead><tr><th>id</th><th>action</th><th>rows moved</th><th>time</th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </div>
+
+  </div>
+
+</main>
+
+<script>
+// ── Helpers ──────────────────────────────────────────────────────────────────
+function showToast(msg, type = 'info') {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = type === 'ok' ? 'toast-ok' : type === 'err' ? 'toast-err' : '';
+  t.style.display = 'block';
+  clearTimeout(t._timer);
+  t._timer = setTimeout(() => { t.style.display = 'none'; }, 4500);
+}
+
+async function apiCall(url, method = 'GET', body = null, btn = null) {
+  if (btn) btn.disabled = true;
+  try {
+    const opts = { method, headers: { 'Content-Type': 'application/json' } };
+    if (body) opts.body = JSON.stringify(body);
+    const r = await fetch(url, opts);
+    if (!r.ok) throw new Error(`HTTP ${r.status}`);
+    return await r.json();
+  } catch (e) {
+    showToast('Request failed: ' + e.message, 'err');
+    return { success: false, message: e.message };
+  } finally {
+    if (btn) btn.disabled = false;
+  }
+}
+
+function fmtTime(ts) {
+  if (!ts) return '–';
+  const d = new Date(ts);
+  return d.toLocaleTimeString() + ' ' + d.toLocaleDateString();
+}
+
+function evBadge(status) {
+  const cls = status === 'done' ? 'ev-done' : status === 'pending' ? 'ev-pending' : 'ev-failed';
+  return `<span class="ev-type ${cls}">${status}</span>`;
+}
+
+// ── State ────────────────────────────────────────────────────────────────────
+let shardStatus   = {};
+let shardCounts   = {};
+let lastMasterRows   = {};
+let lastShardSamples = {};
+
+// ── Build shard cards (all 6) ─────────────────────────────────────────────────
+const MASTER_TAG = ['', 'master1', 'master1', 'master1', 'master2', 'master2', 'master2'];
+
+function buildShardCards() {
+  const container = document.getElementById('shard-cards');
+  container.innerHTML = '';
+  for (let i = 1; i <= 6; i++) {
+    const online = shardStatus[`shard${i}`] === 'online';
+    const cnt    = shardCounts[`shard${i}`] ?? '–';
+    const div    = document.createElement('div');
+    div.className = `node-card ${online ? 'online' : 'offline'}`;
+    div.innerHTML = `
+      <div class="name"><span class="status-dot ${online ? 'dot-on' : 'dot-off'}"></span>shard${i}</div>
+      <div class="count">${cnt}</div>
+      <div class="master-tag">${MASTER_TAG[i]}</div>
+    `;
+    container.appendChild(div);
+  }
+}
+
+// ── Build management grids ────────────────────────────────────────────────────
+function buildMgmtGrids() {
+  // Master 1 → shards 1-3
+  const g1 = document.getElementById('mgmt-grid-1');
+  g1.innerHTML = '';
+  for (let i = 1; i <= 3; i++) {
+    const online = shardStatus[`shard${i}`] === 'online';
+    const p = document.createElement('div');
+    p.className = 'mgmt-pair';
+    p.innerHTML = `
+      <label><span class="status-dot ${online ? 'dot-on' : 'dot-off'}"></span>shard${i}</label>
+      <button class="btn btn-danger btn-sm" onclick="killShard(${i},this)">Kill</button>
+      <button class="btn btn-success btn-sm" onclick="recoverShard(${i},this)">Recover</button>
+    `;
+    g1.appendChild(p);
+  }
+  // Master 2 → shards 4-6
+  const g2 = document.getElementById('mgmt-grid-2');
+  g2.innerHTML = '';
+  for (let i = 4; i <= 6; i++) {
+    const online = shardStatus[`shard${i}`] === 'online';
+    const p = document.createElement('div');
+    p.className = 'mgmt-pair';
+    p.innerHTML = `
+      <label><span class="status-dot ${online ? 'dot-on' : 'dot-off'}"></span>shard${i}</label>
+      <button class="btn btn-danger btn-sm" onclick="killShard(${i},this)">Kill</button>
+      <button class="btn btn-success btn-sm" onclick="recoverShard(${i},this)">Recover</button>
+    `;
+    g2.appendChild(p);
+  }
+}
+
+// ── Populate tables ──────────────────────────────────────────────────────────
+function populateMasterTable(masterNode, rows) {
+  const tbody   = document.querySelector('#tbl-master tbody');
+  const badge   = document.getElementById('master-count-badge');
+  const query   = (document.getElementById('master-search')?.value || '').toLowerCase();
+  tbody.innerHTML = '';
+
+  if (!rows || !rows.length) {
+    badge.textContent = '(offline or empty)';
+    tbody.innerHTML = '<tr><td colspan="4" style="color:#475569">No data</td></tr>';
+    return;
+  }
+
+  const filtered = query
+    ? rows.filter(r => String(r.id_barang).includes(query) || r.nama_barang.toLowerCase().includes(query))
+    : rows;
+
+  badge.textContent = query
+    ? `${filtered.length} / ${rows.length} rows`
+    : `${rows.length} rows`;
+
+  if (!filtered.length) {
+    tbody.innerHTML = '<tr><td colspan="4" style="color:#475569">No matching rows</td></tr>';
+    return;
+  }
+
+  const frag = document.createDocumentFragment();
+  for (const r of filtered) {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `<td>${r.id_barang}</td><td>${r.nama_barang}</td><td>${r.stok}</td><td>${r.target_shard}</td>`;
+    frag.appendChild(tr);
+  }
+  tbody.appendChild(frag);
+}
+
+function populateShardTable(node, samples) {
+  const rows    = samples?.[node];
+  const tbody   = document.querySelector('#tbl-shard tbody');
+  const badge   = document.getElementById('shard-count-badge');
+  const query   = (document.getElementById('shard-search')?.value || '').toLowerCase();
+  tbody.innerHTML = '';
+
+  if (!rows) {
+    badge.textContent = '(offline)';
+    tbody.innerHTML = `<tr><td colspan="3" style="color:#ef4444">Offline or no data</td></tr>`;
+    return;
+  }
+  if (!rows.length) {
+    badge.textContent = '0 rows';
+    tbody.innerHTML = '<tr><td colspan="3" style="color:#475569">Empty</td></tr>';
+    return;
+  }
+
+  const filtered = query
+    ? rows.filter(r => String(r.id_barang).includes(query) || r.nama_barang.toLowerCase().includes(query))
+    : rows;
+
+  badge.textContent = query
+    ? `${filtered.length} / ${rows.length} rows`
+    : `${rows.length} rows`;
+
+  if (!filtered.length) {
+    tbody.innerHTML = '<tr><td colspan="3" style="color:#475569">No matching rows</td></tr>';
+    return;
+  }
+
+  const frag = document.createDocumentFragment();
+  for (const r of filtered) {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `<td>${r.id_barang}</td><td>${r.nama_barang}</td><td>${r.stok}</td>`;
+    frag.appendChild(tr);
+  }
+  tbody.appendChild(frag);
+}
+
+function populateEventTable(events) {
+  const tbody = document.querySelector('#tbl-events tbody');
+  tbody.innerHTML = '';
+  if (!events?.length) {
+    tbody.innerHTML = '<tr><td colspan="5" style="color:#475569">No events yet</td></tr>';
+    return;
+  }
+  for (const e of events) {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `<td>${e.event_id}</td><td style="font-size:.72rem">${e.event_type}</td><td>${e.target_shard ?? '–'}</td><td>${evBadge(e.status)}</td><td style="font-size:.7rem">${fmtTime(e.created_at)}</td>`;
+    tbody.appendChild(tr);
+  }
+}
+
+function populateSyncTable(logs) {
+  const tbody = document.querySelector('#tbl-sync tbody');
+  tbody.innerHTML = '';
+  if (!logs?.length) {
+    tbody.innerHTML = '<tr><td colspan="5" style="color:#475569">No sync logs yet</td></tr>';
+    return;
+  }
+  for (const l of logs) {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `<td>${l.log_id}</td><td style="font-size:.72rem">${l.event_type}</td><td>${l.target_shard ?? '–'}</td><td style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${l.message || ''}">${l.message || ''}</td><td style="font-size:.7rem">${fmtTime(l.created_at)}</td>`;
+    tbody.appendChild(tr);
+  }
+}
+
+function populateRebalTable(logs) {
+  const tbody = document.querySelector('#tbl-rebal tbody');
+  tbody.innerHTML = '';
+  if (!logs?.length) {
+    tbody.innerHTML = '<tr><td colspan="4" style="color:#475569">No rebalance logs yet</td></tr>';
+    return;
+  }
+  for (const l of logs) {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `<td>${l.log_id}</td><td style="font-size:.75rem">${l.action}</td><td>${l.rows_moved}</td><td style="font-size:.7rem">${fmtTime(l.created_at)}</td>`;
+    tbody.appendChild(tr);
+  }
+}
+
+// ── Refresh ──────────────────────────────────────────────────────────────────
+async function refresh() {
+  document.getElementById('last-refresh').textContent = 'Refreshing…';
+
+  const [statusRes, dataRes, evRes] = await Promise.all([
+    apiCall('/api/status'),
+    apiCall('/api/data'),
+    apiCall('/api/events'),
+  ]);
+
+  // ── Status: master counts + connectivity ──
+  if (statusRes.success !== false) {
+    document.getElementById('master1-count').textContent = statusRes.masters?.master1 ?? '–';
+    document.getElementById('master2-count').textContent = statusRes.masters?.master2 ?? '–';
+
+    const c = statusRes.connectivity || {};
+    document.getElementById('dot-master1').className = `status-dot ${c.master1 ? 'dot-on' : 'dot-off'}`;
+    document.getElementById('dot-master2').className = `status-dot ${c.master2 ? 'dot-on' : 'dot-off'}`;
+    document.getElementById('conn-master1').textContent = c.master1 ? 'Connected' : 'Disconnected';
+    document.getElementById('conn-master2').textContent = c.master2 ? 'Connected' : 'Disconnected';
+
+    shardStatus = statusRes.shards  || {};
+    shardCounts = statusRes.counts  || {};
+    buildShardCards();
+    buildMgmtGrids();
+  }
+
+  // ── Data: master rows + shard samples ──
+  if (dataRes.success !== false) {
+    lastMasterRows   = dataRes.masterRows   || {};
+    lastShardSamples = dataRes.shardSamples || {};
+
+    const selMaster = document.getElementById('master-select').value;
+    populateMasterTable(selMaster, lastMasterRows[selMaster]);
+    populateShardTable(document.getElementById('shard-select').value, lastShardSamples);
+  }
+
+  // ── Events / Sync / Rebalance logs ──
+  if (evRes.success !== false) {
+    populateEventTable(evRes.events);
+    populateSyncTable(evRes.syncLog);
+    populateRebalTable(evRes.rebalLog);
+  }
+
+  document.getElementById('last-refresh').textContent = 'Last refresh: ' + new Date().toLocaleTimeString();
+}
+
+// ── Shard kill / recover ─────────────────────────────────────────────────────
+async function killShard(id, btn) {
+  const r = await apiCall(`/api/kill-shard/${id}`, 'POST', null, btn);
+  showToast(r.message, r.success ? 'ok' : 'err');
+  document.getElementById('mgmt-result').textContent = r.message;
+  await refresh();
+}
+
+async function recoverShard(id, btn) {
+  const r = await apiCall(`/api/recover-shard/${id}`, 'POST', null, btn);
+  showToast(r.message, r.success ? 'ok' : 'err');
+  document.getElementById('mgmt-result').textContent = r.message;
+  await refresh();
+}
+
+// ── Tab switching ─────────────────────────────────────────────────────────────
+function switchTab(tab) {
+  document.getElementById('panel-bulk').classList.toggle('active', tab === 'bulk');
+  document.getElementById('panel-manual').classList.toggle('active', tab === 'manual');
+  document.getElementById('tab-bulk').classList.toggle('active', tab === 'bulk');
+  document.getElementById('tab-manual').classList.toggle('active', tab === 'manual');
+  document.getElementById('add-result').textContent = '';
+}
+
+// ── Button wiring ─────────────────────────────────────────────────────────────
+document.getElementById('btn-add').addEventListener('click', async function () {
+  const count  = parseInt(document.getElementById('add-count').value);
+  const master = parseInt(document.getElementById('add-master').value);
+  if (!count || count < 1) { showToast('Enter a valid count (1+)', 'err'); return; }
+  const r = await apiCall('/api/add-data', 'POST', { count, master }, this);
+  const result = document.getElementById('add-result');
+  if (r.success) {
+    const dist = r.distributed
+      ? Object.entries(r.distributed).map(([k, v]) => `${k}:${v}`).join(', ')
+      : '';
+    result.textContent = r.message + (dist ? `  |  Distribution: ${dist}` : '');
+    showToast(r.message, 'ok');
+  } else {
+    result.textContent = r.message;
+    showToast(r.message, 'err');
+  }
+  await refresh();
+});
+
+document.getElementById('btn-insert').addEventListener('click', async function () {
+  const nama   = document.getElementById('man-name').value.trim();
+  const id     = document.getElementById('man-id').value.trim();
+  const stok   = document.getElementById('man-stok').value.trim();
+  const master = parseInt(document.getElementById('man-master').value);
+
+  const body = { master };
+  if (nama)          body.nama_barang = nama;
+  if (id !== '')     body.id_barang   = parseInt(id);
+  if (stok !== '')   body.stok        = parseInt(stok);
+
+  const r = await apiCall('/api/insert-item', 'POST', body, this);
+  const result = document.getElementById('add-result');
+  if (r.success) {
+    const it = r.item;
+    result.textContent = `✅ Inserted: id=${it.id_barang}, name="${it.nama_barang}", stok=${it.stok} → ${it.shard}`;
+    showToast(r.message, 'ok');
+    // Clear fields after success
+    document.getElementById('man-name').value = '';
+    document.getElementById('man-id').value   = '';
+    document.getElementById('man-stok').value = '';
+  } else {
+    result.textContent = '❌ ' + r.message;
+    showToast(r.message, 'err');
+  }
+  await refresh();
+});
+
+document.getElementById('btn-delete').addEventListener('click', async function () {
+  const id = document.getElementById('del-id').value.trim();
+  if (!id) { showToast('Enter an id_barang to delete', 'err'); return; }
+  if (!confirm(`Are you sure you want to delete id_barang = ${id}? This removes it from the master and all shards.`)) return;
+  const r = await apiCall(`/api/delete-item/${id}`, 'DELETE', null, this);
+  const result = document.getElementById('del-result');
+  if (r.success) {
+    result.innerHTML = `✅ ${r.message}`;
+    showToast(r.message, 'ok');
+    document.getElementById('del-id').value = '';
+    document.getElementById('del-preview').textContent = '';
+  } else {
+    result.innerHTML = `❌ ${r.message}`;
+    showToast(r.message, 'err');
+  }
+  await refresh();
+});
+
+// Live preview: show item name as user types the ID
+document.getElementById('del-id').addEventListener('input', async function () {
+  const id = this.value.trim();
+  const preview = document.getElementById('del-preview');
+  if (!id) { preview.textContent = ''; return; }
+  try {
+    const r = await fetch(`/api/lookup-item/${id}`);
+    const data = await r.json();
+    if (data.success) {
+      preview.textContent = `📦 "${data.item.nama_barang}" — stok: ${data.item.stok} (${data.master})`;
+      preview.style.color = '#94a3b8';
+    } else {
+      preview.textContent = '⚠️ Item not found';
+      preview.style.color = '#f59e0b';
+    }
+  } catch { preview.textContent = ''; }
+});
+
+document.getElementById('btn-sync').addEventListener('click', async function () {
+  const r = await apiCall('/api/sync', 'POST', null, this);
+  document.getElementById('mgmt-result').textContent = r.message;
+  showToast(r.message, r.success ? 'ok' : 'err');
+  await refresh();
+});
+
+document.getElementById('btn-rebalance').addEventListener('click', async function () {
+  const r = await apiCall('/api/rebalance', 'POST', null, this);
+  document.getElementById('mgmt-result').textContent = r.message;
+  showToast(r.message, r.success ? 'ok' : 'err');
+  await refresh();
+});
+
+document.getElementById('btn-kill-all').addEventListener('click', async function () {
+  const r = await apiCall('/api/kill-all-shards', 'POST', null, this);
+  showToast(r.message, r.success ? 'ok' : 'err');
+  document.getElementById('mgmt-result').textContent = r.message;
+  await refresh();
+});
+
+document.getElementById('btn-recover-all').addEventListener('click', async function () {
+  const r = await apiCall('/api/recover-all-shards', 'POST', null, this);
+  showToast(r.message, r.success ? 'ok' : 'err');
+  document.getElementById('mgmt-result').textContent = r.message;
+  await refresh();
+});
+
+document.getElementById('btn-refresh').addEventListener('click', async function () {
+  this.disabled = true;
+  await refresh();
+  this.disabled = false;
+});
+
+document.getElementById('shard-select').addEventListener('change', function () {
+  document.getElementById('shard-search').value = '';
+  populateShardTable(this.value, lastShardSamples);
+});
+
+document.getElementById('master-select').addEventListener('change', function () {
+  document.getElementById('master-search').value = '';
+  populateMasterTable(this.value, lastMasterRows[this.value]);
+});
+
+document.getElementById('master-search').addEventListener('input', function () {
+  const sel = document.getElementById('master-select').value;
+  populateMasterTable(sel, lastMasterRows[sel]);
+});
+
+document.getElementById('shard-search').addEventListener('input', function () {
+  populateShardTable(document.getElementById('shard-select').value, lastShardSamples);
+});
+
+// ── Init ─────────────────────────────────────────────────────────────────────
+refresh();
+setInterval(refresh, 15000);
+</script>
+</body>
+</html>

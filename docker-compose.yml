@@ -1,0 +1,363 @@
+# ============================================================
+# Distributed DB Demo — Docker Compose
+# Architecture: 2 masters × 3 shards each (6 shards total)
+#   master1 → shard1, shard2, shard3
+#   master2 → shard4, shard5, shard6
+# Ports:
+#   master1  5432  master2  5433
+#   shard1   5434  shard2   5435  shard3   5436
+#   shard4   5437  shard5   5438  shard6   5439
+#   backend  3000  prometheus 9090  grafana 3001
+# ============================================================
+
+networks:
+  db-network:
+    driver: bridge
+
+volumes:
+  master1_pgdata:
+  master2_pgdata:
+  shard1_pgdata:
+  shard2_pgdata:
+  shard3_pgdata:
+  shard4_pgdata:
+  shard5_pgdata:
+  shard6_pgdata:
+  prometheus_data:
+  grafana_data:
+  loki_data:
+
+services:
+
+  # ── MASTER 1 (Food & Grocery) ──────────────────────────────
+  master1:
+    image: postgres:15-alpine
+    container_name: master1
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: master_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - master1_pgdata:/var/lib/postgresql/data
+      - ./env/01_master1_init.sql:/docker-entrypoint-initdb.d/01_init.sql
+    networks:
+      - db-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d master_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  # ── MASTER 2 (Household & Non-Food) ───────────────────────
+  master2:
+    image: postgres:15-alpine
+    container_name: master2
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: master_db
+    ports:
+      - "5433:5432"
+    volumes:
+      - master2_pgdata:/var/lib/postgresql/data
+      - ./env/02_master2_init.sql:/docker-entrypoint-initdb.d/01_init.sql
+    networks:
+      - db-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d master_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  # ── SHARD 1 (master1, items 1–100) ────────────────────────
+  shard1:
+    image: postgres:15-alpine
+    container_name: shard1
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: shard_db
+    ports:
+      - "5434:5432"
+    volumes:
+      - shard1_pgdata:/var/lib/postgresql/data
+      - ./env/03_shard1_init.sql:/docker-entrypoint-initdb.d/01_init.sql
+    networks:
+      - db-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d shard_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  # ── SHARD 2 (master1, items 101–200) ──────────────────────
+  shard2:
+    image: postgres:15-alpine
+    container_name: shard2
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: shard_db
+    ports:
+      - "5435:5432"
+    volumes:
+      - shard2_pgdata:/var/lib/postgresql/data
+      - ./env/04_shard2_init.sql:/docker-entrypoint-initdb.d/01_init.sql
+    networks:
+      - db-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d shard_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  # ── SHARD 3 (master1, items 201–300) ──────────────────────
+  shard3:
+    image: postgres:15-alpine
+    container_name: shard3
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: shard_db
+    ports:
+      - "5436:5432"
+    volumes:
+      - shard3_pgdata:/var/lib/postgresql/data
+      - ./env/05_shard3_init.sql:/docker-entrypoint-initdb.d/01_init.sql
+    networks:
+      - db-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d shard_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  # ── SHARD 4 (master2, items 1–100) ────────────────────────
+  shard4:
+    image: postgres:15-alpine
+    container_name: shard4
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: shard_db
+    ports:
+      - "5437:5432"
+    volumes:
+      - shard4_pgdata:/var/lib/postgresql/data
+      - ./env/06_shard4_init.sql:/docker-entrypoint-initdb.d/01_init.sql
+    networks:
+      - db-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d shard_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  # ── SHARD 5 (master2, items 101–200) ──────────────────────
+  shard5:
+    image: postgres:15-alpine
+    container_name: shard5
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: shard_db
+    ports:
+      - "5438:5432"
+    volumes:
+      - shard5_pgdata:/var/lib/postgresql/data
+      - ./env/07_shard5_init.sql:/docker-entrypoint-initdb.d/01_init.sql
+    networks:
+      - db-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d shard_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  # ── SHARD 6 (master2, items 201–300) ──────────────────────
+  shard6:
+    image: postgres:15-alpine
+    container_name: shard6
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: shard_db
+    ports:
+      - "5439:5432"
+    volumes:
+      - shard6_pgdata:/var/lib/postgresql/data
+      - ./env/08_shard6_init.sql:/docker-entrypoint-initdb.d/01_init.sql
+    networks:
+      - db-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d shard_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  # ── BACKEND ────────────────────────────────────────────────
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: backend
+    restart: unless-stopped
+    environment:
+      PORT: 3000
+      DB_USER: postgres
+      DB_PASS: postgres
+      MASTER1_HOST: master1
+      MASTER2_HOST: master2
+      SHARD1_HOST: shard1
+      SHARD2_HOST: shard2
+      SHARD3_HOST: shard3
+      SHARD4_HOST: shard4
+      SHARD5_HOST: shard5
+      SHARD6_HOST: shard6
+      DOCKER_SOCKET: /var/run/docker.sock
+      LOKI_HOST: loki
+    ports:
+      - "3000:3000"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    networks:
+      - db-network
+    depends_on:
+      master1:
+        condition: service_healthy
+      master2:
+        condition: service_healthy
+      shard1:
+        condition: service_healthy
+      shard2:
+        condition: service_healthy
+      shard3:
+        condition: service_healthy
+      shard4:
+        condition: service_healthy
+      shard5:
+        condition: service_healthy
+      shard6:
+        condition: service_healthy
+
+  # ── CADVISOR ───────────────────────────────────────────────
+  cadvisor:
+    image: gcr.io/cadvisor/cadvisor:latest
+    container_name: cadvisor
+    restart: unless-stopped
+    privileged: true
+    ports:
+      - "8080:8080"
+    volumes:
+      - /:/rootfs:ro
+      - /var/run:/var/run:ro
+      - /sys:/sys:ro
+      - /var/lib/docker:/var/lib/docker:ro
+    networks:
+      - db-network
+
+  # ── POSTGRES EXPORTER (monitors master1) ──────────────────
+  postgres-exporter:
+    image: prometheuscommunity/postgres-exporter:latest
+    container_name: postgres-exporter
+    restart: unless-stopped
+    environment:
+      DATA_SOURCE_NAME: "postgresql://postgres:postgres@master1:5432/master_db?sslmode=disable"
+      PG_EXPORTER_EXTEND_QUERY_PATH: /etc/postgres-exporter/queries.yml
+    ports:
+      - "9187:9187"
+    volumes:
+      - ./env/postgres-exporter-queries.yml:/etc/postgres-exporter/queries.yml:ro
+    networks:
+      - db-network
+    depends_on:
+      master1:
+        condition: service_healthy
+
+  # ── PROMETHEUS ─────────────────────────────────────────────
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: prometheus
+    restart: unless-stopped
+    ports:
+      - "9090:9090"
+    volumes:
+      - prometheus_data:/prometheus
+      - ./dashboard/prometheus.yml:/etc/prometheus/prometheus.yml
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.enable-lifecycle'
+    networks:
+      - db-network
+    depends_on:
+      - cadvisor
+      - postgres-exporter
+
+  # ── GRAFANA ────────────────────────────────────────────────
+  grafana:
+    image: grafana/grafana:latest
+    container_name: grafana
+    restart: unless-stopped
+    environment:
+      GF_SECURITY_ADMIN_USER: admin
+      GF_SECURITY_ADMIN_PASSWORD: admin
+      GF_AUTH_ANONYMOUS_ENABLED: "true"
+      GF_AUTH_ANONYMOUS_ORG_ROLE: Admin
+    ports:
+      - "3001:3000"
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./dashboard/grafana-datasource.yml:/etc/grafana/provisioning/datasources/prometheus.yml
+      - ./dashboard/grafana-dashboards.yml:/etc/grafana/provisioning/dashboards/grafana-dashboards.yml
+      - ./dashboard/db-dashboard.json:/var/lib/grafana/dashboards/db-dashboard.json
+    networks:
+      - db-network
+    depends_on:
+      - prometheus
+      - loki
+
+  # ── LOKI ──────────────────────────────────────────────────
+  loki:
+    image: grafana/loki:2.9.0
+    container_name: loki
+    restart: unless-stopped
+    ports:
+      - "3100:3100"
+    volumes:
+      - loki_data:/loki
+      - ./dashboard/loki-config.yml:/etc/loki/loki-config.yml
+    command: -config.file=/etc/loki/loki-config.yml
+    networks:
+      - db-network
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q --spider http://localhost:3100/ready || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  # ── PROMTAIL ──────────────────────────────────────────────
+  # Collects Docker container stdout/stderr logs and ships them to Loki.
+  promtail:
+    image: grafana/promtail:2.9.0
+    container_name: promtail
+    restart: unless-stopped
+    volumes:
+      - ./dashboard/promtail-config.yml:/etc/promtail/config.yml
+      - /var/run/docker.sock:/var/run/docker.sock
+    command: -config.file=/etc/promtail/config.yml
+    networks:
+      - db-network
+    depends_on:
+      loki:
+        condition: service_healthy
