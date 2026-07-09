@@ -1,6 +1,6 @@
 -- ============================================================
 -- MASTER 2 INIT — Household & Non-Food (300 items, 3 shards)
--- master2 → shard4 (ids 1–100), shard5 (ids 101–200), shard6 (ids 201–300)
+-- master2 → shard4 (ids 301–400), shard5 (ids 401–500), shard6 (ids 501–600)
 -- ============================================================
 
 CREATE TABLE IF NOT EXISTS barang (
@@ -87,8 +87,8 @@ SELECT
     'Oil Pastel Mungyo','Pensil Karbon Conte','Tinta India Pelikan','Palet Plastik','Fixative Spray',
     'Sikat Gigi Oral-B','Odol Pepsodent Charcoal','Mouthwash Listerine','Benang Gigi Oral-B','Tongue Cleaner',
     'Sikat Gigi Elektrik Braun','Floss Pick','Water Flosser','Whitening Gel','Odol Sensodyne'
-  ])[gs] AS nama_barang,
+  ])[gs - 300] AS nama_barang,
   ((gs * 17 + 37) % 491) + 10 AS stok,
-  CASE WHEN gs <= 100 THEN 1 WHEN gs <= 200 THEN 2 ELSE 3 END AS target_shard
-FROM generate_series(1, 300) AS gs
+  CASE WHEN gs <= 400 THEN 1 WHEN gs <= 500 THEN 2 ELSE 3 END AS target_shard
+FROM generate_series(301, 600) AS gs
 ON CONFLICT (id_barang) DO NOTHING;

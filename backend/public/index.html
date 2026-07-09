@@ -178,10 +178,14 @@
     <!-- Delete Data card -->
     <div class="card">
       <h2><span class="icon">🗑️</span>Delete Item</h2>
-      <p style="font-size:.78rem;color:#64748b;margin-bottom:12px">Removes the item from its master and all its shards. Enter the exact <code>id_barang</code>.</p>
+      <p style="font-size:.78rem;color:#64748b;margin-bottom:12px">Removes the item from the selected master and all its shards.</p>
       <div class="add-form" style="flex-direction:column;align-items:flex-start;gap:10px">
-        <div style="display:flex;gap:8px;align-items:center">
-          <input type="number" id="del-id" placeholder="id_barang e.g. 42" min="1" style="width:200px"/>
+        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+          <select id="del-master" style="background:#0f172a;border:1px solid #334155;border-radius:8px;color:#e2e8f0;padding:6px 12px;font-size:.82rem">
+            <option value="master1">Master 1 (Food)</option>
+            <option value="master2">Master 2 (Household)</option>
+          </select>
+          <input type="number" id="del-id" placeholder="id_barang e.g. 42" min="1" style="width:180px"/>
           <button class="btn btn-danger" id="btn-delete">Delete Item</button>
         </div>
         <div id="del-preview" style="font-size:.78rem;color:#94a3b8"></div>
@@ -640,10 +644,11 @@ document.getElementById('btn-insert').addEventListener('click', async function (
 });
 
 document.getElementById('btn-delete').addEventListener('click', async function () {
-  const id = document.getElementById('del-id').value.trim();
+  const id     = document.getElementById('del-id').value.trim();
+  const master = document.getElementById('del-master').value;
   if (!id) { showToast('Enter an id_barang to delete', 'err'); return; }
-  if (!confirm(`Are you sure you want to delete id_barang = ${id}? This removes it from the master and all shards.`)) return;
-  const r = await apiCall(`/api/delete-item/${id}`, 'DELETE', null, this);
+  if (!confirm(`Delete id_barang=${id} from ${master} and its shards?`)) return;
+  const r = await apiCall(`/api/delete-item/${id}?master=${master}`, 'DELETE', null, this);
   const result = document.getElementById('del-result');
   if (r.success) {
     result.innerHTML = `✅ ${r.message}`;
@@ -657,23 +662,27 @@ document.getElementById('btn-delete').addEventListener('click', async function (
   await refresh();
 });
 
-// Live preview: show item name as user types the ID
-document.getElementById('del-id').addEventListener('input', async function () {
-  const id = this.value.trim();
+// Live preview: show item name as user types the ID or changes master
+async function updateDelPreview() {
+  const id     = document.getElementById('del-id').value.trim();
+  const master = document.getElementById('del-master').value;
   const preview = document.getElementById('del-preview');
   if (!id) { preview.textContent = ''; return; }
   try {
-    const r = await fetch(`/api/lookup-item/${id}`);
+    const r    = await fetch(`/api/lookup-item/${id}?master=${master}`);
     const data = await r.json();
     if (data.success) {
-      preview.textContent = `📦 "${data.item.nama_barang}" — stok: ${data.item.stok} (${data.master})`;
+      preview.textContent = `📦 "${data.item.nama_barang}" — stok: ${data.item.stok} → ${data.master}`;
       preview.style.color = '#94a3b8';
     } else {
-      preview.textContent = '⚠️ Item not found';
+      preview.textContent = `⚠️ Not found on ${master}`;
       preview.style.color = '#f59e0b';
     }
   } catch { preview.textContent = ''; }
-});
+}
+
+document.getElementById('del-id').addEventListener('input', updateDelPreview);
+document.getElementById('del-master').addEventListener('change', updateDelPreview);
 
 document.getElementById('btn-sync').addEventListener('click', async function () {
   const r = await apiCall('/api/sync', 'POST', null, this);

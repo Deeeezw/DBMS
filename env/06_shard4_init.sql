@@ -1,4 +1,4 @@
--- SHARD 4 — master2 items 1–100 (Kabel → Card Reader USB)
+-- SHARD 4 — master2 items 301–400 (Kabel → Card Reader USB)
 CREATE TABLE IF NOT EXISTS barang (
     id_barang   INT PRIMARY KEY,
     nama_barang VARCHAR(100) NOT NULL,
@@ -30,7 +30,7 @@ SELECT
     'Tensimeter Digital','Masker Medis','Alkohol 70%','Obat Nyamuk Bakar','Minyak Kayu Putih Cap Lang',
     'Case HP Silikon','Tempered Glass 5D','Ring Holder HP','Pop Socket','Wireless Charger',
     'Holder Motor HP','Earphone Bluetooth','Powerbank 10000mAh','USB Hub 4 Port','Card Reader USB'
-  ])[gs] AS nama_barang,
+  ])[gs - 300] AS nama_barang,
   ((gs * 17 + 37) % 491) + 10 AS stok
-FROM generate_series(1, 100) AS gs
+FROM generate_series(301, 400) AS gs
 ON CONFLICT (id_barang) DO NOTHING;

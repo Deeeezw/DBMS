@@ -1,4 +1,4 @@
--- SHARD 6 — master2 items 201–300 (Kertas A4 → Odol Sensodyne)
+-- SHARD 6 — master2 items 501–600 (Kertas A4 → Odol Sensodyne)
 CREATE TABLE IF NOT EXISTS barang (
     id_barang   INT PRIMARY KEY,
     nama_barang VARCHAR(100) NOT NULL,
@@ -30,7 +30,7 @@ SELECT
     'Oil Pastel Mungyo','Pensil Karbon Conte','Tinta India Pelikan','Palet Plastik','Fixative Spray',
     'Sikat Gigi Oral-B','Odol Pepsodent Charcoal','Mouthwash Listerine','Benang Gigi Oral-B','Tongue Cleaner',
     'Sikat Gigi Elektrik Braun','Floss Pick','Water Flosser','Whitening Gel','Odol Sensodyne'
-  ])[gs - 200] AS nama_barang,
+  ])[gs - 500] AS nama_barang,
   ((gs * 17 + 37) % 491) + 10 AS stok
-FROM generate_series(201, 300) AS gs
+FROM generate_series(501, 600) AS gs
 ON CONFLICT (id_barang) DO NOTHING;

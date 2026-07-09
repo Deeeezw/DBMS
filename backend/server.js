@@ -277,6 +277,13 @@ const MASTER1_SHARDS = [1, 2, 3];
 const MASTER2_SHARDS = [4, 5, 6];
 const ALL_SHARDS     = [1, 2, 3, 4, 5, 6];
 
+// ID ranges (globally unique across the whole cluster):
+//   1  – 300 : master1 seeded data
+//   301– 600 : master2 seeded data
+//   601– 900 : master1 new inserts
+//   901+     : master2 new inserts
+const ID_FLOOR = { master1: 601, master2: 901 };
+
 // ── Docker control helpers ────────────────────────────────────────────────────
 const DOCKER_SOCKET = process.env.DOCKER_SOCKET || '/var/run/docker.sock';
 
@@ -467,7 +474,8 @@ app.post('/api/add-data', async (req, res) => {
 
   try {
     const maxRow = await qry(masterNode, 'SELECT MAX(id_barang) AS mx FROM barang');
-    let nextId   = (parseInt(maxRow[0].mx) || 0) + 1;
+    const floor  = ID_FLOOR[masterNode];
+    let nextId   = Math.max((parseInt(maxRow[0].mx) || 0) + 1, floor);
 
     const distributed = {};
     let inserted = 0;
@@ -533,12 +541,13 @@ app.post('/api/insert-item', async (req, res) => {
 
   const masterNode = `master${masterNum}`;
 
-  // Resolve id — use provided or auto-increment
+  // Resolve id — use provided or auto-increment from master-specific floor
   let id = parseInt(req.body.id_barang);
-  if (!id || isNaN(id) || id < 1) {
+  const idFloor = ID_FLOOR[masterNode];
+  if (!id || isNaN(id) || id < idFloor) {
     try {
       const maxRow = await qry(masterNode, 'SELECT MAX(id_barang) AS mx FROM barang');
-      id = (parseInt(maxRow[0].mx) || 0) + 1;
+      id = Math.max((parseInt(maxRow[0].mx) || 0) + 1, idFloor);
     } catch (e) {
       return res.json({ success: false, message: `Cannot read master${masterNum}: ${e.message}` });
     }

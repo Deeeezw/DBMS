@@ -1,4 +1,4 @@
--- SHARD 5 — master2 items 101–200 (Pensil 2B → Guling Bayi)
+-- SHARD 5 — master2 items 401–500 (Pensil 2B → Guling Bayi)
 CREATE TABLE IF NOT EXISTS barang (
     id_barang   INT PRIMARY KEY,
     nama_barang VARCHAR(100) NOT NULL,
@@ -30,7 +30,7 @@ SELECT
     'Sarung Tinju','Pelindung Lutut','Pelindung Siku','Sepatu Slip On Olahraga','Kaos Kaki Olahraga',
     'Pampers Bayi S','Bedak Bayi Johnson','Sabun Bayi Cussons','Tisu Basah Bayi','Minyak Telon Lang',
     'Selimut Bayi Fleece','Kaus Kaki Bayi','Topi Bayi Rajut','Bantal Kepala Bayi','Guling Bayi'
-  ])[gs - 100] AS nama_barang,
+  ])[gs - 400] AS nama_barang,
   ((gs * 17 + 37) % 491) + 10 AS stok
-FROM generate_series(101, 200) AS gs
+FROM generate_series(401, 500) AS gs
 ON CONFLICT (id_barang) DO NOTHING;

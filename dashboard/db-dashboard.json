@@ -258,6 +258,84 @@
           "refId": "A"
         }
       ]
+    },
+
+    {
+      "id": 8,
+      "type": "timeseries",
+      "title": "Total Rows per Shard — Over Time",
+      "description": "How many rows (barang) each shard holds over time. Spikes = inserts, drops = deletes or rebalancing.",
+      "gridPos": { "h": 9, "w": 16, "x": 0, "y": 33 },
+      "options": {
+        "legend": { "displayMode": "table", "placement": "right", "showLegend": true, "calcs": ["lastNotNull", "max"] },
+        "tooltip": { "mode": "multi", "sort": "desc" }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "palette-classic" },
+          "unit": "short",
+          "decimals": 0,
+          "custom": {
+            "lineWidth": 2,
+            "fillOpacity": 12,
+            "gradientMode": "opacity",
+            "spanNulls": false,
+            "showPoints": "never"
+          }
+        },
+        "overrides": []
+      },
+      "targets": [
+        {
+          "datasource": { "type": "prometheus", "uid": "PBFA97CFB590B2093" },
+          "expr": "shard_data_rows_total",
+          "legendFormat": "{{shard}}",
+          "refId": "A"
+        }
+      ]
+    },
+
+    {
+      "id": 9,
+      "type": "bargauge",
+      "title": "Current Rows per Shard",
+      "description": "Snapshot of how many rows each shard holds right now.",
+      "gridPos": { "h": 9, "w": 8, "x": 16, "y": 33 },
+      "options": {
+        "displayMode": "gradient",
+        "orientation": "horizontal",
+        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
+        "showUnfilled": true,
+        "valueMode": "color",
+        "minVizWidth": 0,
+        "minVizHeight": 16
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "thresholds" },
+          "unit": "short",
+          "decimals": 0,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "blue",   "value": null },
+              { "color": "green",  "value": 1 },
+              { "color": "yellow", "value": 500 },
+              { "color": "red",    "value": 1000 }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "targets": [
+        {
+          "datasource": { "type": "prometheus", "uid": "PBFA97CFB590B2093" },
+          "expr": "shard_data_rows_total",
+          "instant": true,
+          "legendFormat": "{{shard}}",
+          "refId": "A"
+        }
+      ]
     }
 
   ]
